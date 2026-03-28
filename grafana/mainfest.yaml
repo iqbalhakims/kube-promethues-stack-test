@@ -1342,7 +1342,7 @@ metadata:
     app.kubernetes.io/instance: kube-prometheus-stack
     app.kubernetes.io/version: "12.1.0"
 spec:
-  type: LoadBalancer 
+  type: ClusterIP
   ports:
     - name: http-web
       port: 80

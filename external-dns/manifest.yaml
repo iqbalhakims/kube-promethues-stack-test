@@ -140,6 +140,20 @@ spec:
             - --policy=upsert-only
             - --registry=txt
             - --provider=aws
+            - --zone-id-filter=Z06541262U0JLX5W7P6LN
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: external-dns-aws
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: external-dns-aws
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_REGION
+              value: us-east-1
           ports:
             - name: http
               protocol: TCP

@@ -1,0 +1,45 @@
+---
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: istio-ingress-gateway
+  namespace: istio-system
+spec:
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - grafana.staging.iqbalhakim.live
+        - argocd.staging.iqbalhakim.live
+      tls:
+        httpsRedirect: true
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      hosts:
+        - grafana.staging.iqbalhakim.live
+        - argocd.staging.iqbalhakim.live
+      tls:
+        mode: SIMPLE
+        credentialName: iqbalhakim-staging-tls
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  hosts:
+    - grafana.staging.iqbalhakim.live
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: argocd
+  namespace: argocd
+spec:
+  hosts:
+    - argocd.staging.iqbalhakim.live

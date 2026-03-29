@@ -1,0 +1,36 @@
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: "teamstac350@gmail.com"
+    privateKeySecretRef:
+      name: letsencrypt-staging-account-key
+    solvers:
+      - dns01:
+          route53:
+            region: us-east-1
+            hostedZoneID: Z06541262U0JLX5W7P6LN
+            accessKeyIDSecretRef:
+              name: route53-credentials
+              key: AWS_ACCESS_KEY_ID
+            secretAccessKeySecretRef:
+              name: route53-credentials
+              key: AWS_SECRET_ACCESS_KEY
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: iqbalhakim-live-tls
+  namespace: istio-system
+spec:
+  secretName: iqbalhakim-staging-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - argocd.staging.iqbalhakim.live
+    - grafana.staging.iqbalhakim.live

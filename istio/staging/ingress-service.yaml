@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: istio-ingress
+  namespace: istio-system
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: grafana.staging.iqbalhakim.live,argocd.staging.iqbalhakim.live
+    tailscale.com/hostname: "iqbalhakim-ingress-staging"

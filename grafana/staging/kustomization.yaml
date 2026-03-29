@@ -9,3 +9,4 @@ resources:
 patches:
   - path: external-secrets.yaml
   - path: admission-patch.yaml
+  - path: grafana-config-patch.yaml

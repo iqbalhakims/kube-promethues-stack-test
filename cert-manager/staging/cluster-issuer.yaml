@@ -2,10 +2,10 @@
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
-  name: letsencrypt-prod
+  name: letsencrypt-staging
 spec:
   acme:
-    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    server: https://acme-v02.api.letsencrypt.org/directory
     email: "teamstac350@gmail.com"
     privateKeySecretRef:
       name: letsencrypt-staging-account-key
@@ -24,13 +24,13 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: iqbalhakim-live-tls
+  name: staging-iqbalhakim-live-tls
   namespace: istio-system
 spec:
   secretName: iqbalhakim-staging-tls
   issuerRef:
-    name: letsencrypt-prod
+    name: letsencrypt-staging
     kind: ClusterIssuer
   dnsNames:
-    - argocd.staging.iqbalhakim.live
+    - argo.staging.iqbalhakim.live
     - grafana.staging.iqbalhakim.live

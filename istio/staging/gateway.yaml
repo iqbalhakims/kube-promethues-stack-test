@@ -15,7 +15,7 @@ spec:
         protocol: HTTP
       hosts:
         - grafana.staging.iqbalhakim.live
-        - argocd.staging.iqbalhakim.live
+        - argo.staging.iqbalhakim.live
       tls:
         httpsRedirect: true
     - port:
@@ -24,7 +24,7 @@ spec:
         protocol: HTTPS
       hosts:
         - grafana.staging.iqbalhakim.live
-        - argocd.staging.iqbalhakim.live
+        - argo.staging.iqbalhakim.live
       tls:
         mode: SIMPLE
         credentialName: iqbalhakim-staging-tls
@@ -53,7 +53,7 @@ metadata:
   namespace: argocd
 spec:
   hosts:
-    - argocd.staging.iqbalhakim.live
+    - argo.staging.iqbalhakim.live
   gateways:
     - istio-system/staging-istio-ingress-gateway
   http:

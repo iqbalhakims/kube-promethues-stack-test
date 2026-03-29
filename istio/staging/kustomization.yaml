@@ -4,7 +4,8 @@ kind: Kustomization
 namePrefix: staging-
 
 resources:
-  - ../base/
+  - ../base/ingress.yaml
+  - ../base/gateway.yaml
 
 patches:
   - path: ingress-service.yaml

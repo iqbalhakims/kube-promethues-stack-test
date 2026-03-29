@@ -12,6 +12,8 @@ Kubernetes infrastructure setup running on DigitalOcean Kubernetes (DOKS).
 
 ## Components
 
+
+
 | Component | Directory | Description |
 |---|---|---|
 | ArgoCD | `argocd/` | GitOps continuous delivery |
@@ -24,10 +26,12 @@ Kubernetes infrastructure setup running on DigitalOcean Kubernetes (DOKS).
 
 ## Domains
 
-| Service | Domain |
-|---|---|
-| ArgoCD | `argocd.iqbalhakim.live` |
-| Grafana | `grafana.iqbalhakim.live` |
+| Service | Environment | Domain |
+|---|---|---|
+| ArgoCD | prod | `argocd.iqbalhakim.live` |
+| ArgoCD | staging | `argocd.staging.iqbalhakim.live` |
+| Grafana | prod | `grafana.iqbalhakim.live` |
+| Grafana | staging | `grafana.staging.iqbalhakim.live` |
 
 ## Secrets Management
 
@@ -41,6 +45,8 @@ Secrets are stored in **AWS Secrets Manager** (`ap-southeast-1`) and synced into
 | `argocd/argocd-notifications-secret` | `argocd-notifications-secret` | `argocd` |
 | `monitoring/kube-prometheus-stack-grafana` | `kube-prometheus-stack-grafana` | `monitoring` |
 | `monitoring/alertmanager-kube-prometheus-stack-alertmanager` | `alertmanager-kube-prometheus-stack-alertmanager` | `monitoring` |
+| `monitoring/staging/kube-prometheus-stack-grafana` | `staging-kube-prometheus-stack-grafana` | `monitoring` |
+| `monitoring/staging/alertmanager-kube-prometheus-stack-alertmanager` | `staging-alertmanager-kube-prometheus-stack-alertmanager` | `monitoring` |
 
 ### IAM credentials
 
@@ -50,6 +56,34 @@ ESO authenticates to AWS using a static IAM user. Store the credentials in `exte
 stringData:
   access-key: <AWS_ACCESS_KEY_ID>
   secret-access-key: <AWS_SECRET_ACCESS_KEY>
+```
+
+## Known issues / Gotchas
+
+### namePrefix on cluster-singleton components
+
+cert-manager and istiod are **cluster-scoped singletons** — they must only be deployed once. Do NOT apply `namePrefix: staging-` to their base manifests.
+
+The `cert-manager/staging/` and `istio/staging/` overlays only patch environment-specific resources (ClusterIssuer, Certificate, Gateway, VirtualService). If you accidentally apply the staging overlay with `namePrefix` on the full base, the webhook TLS certs will break because the service names change (e.g. `staging-cert-manager-webhook`) but the certs are valid for the original names.
+
+**Recovery:**
+```bash
+# Delete broken webhook configs
+kubectl delete mutatingwebhookconfiguration staging-cert-manager-webhook --ignore-not-found
+kubectl delete validatingwebhookconfiguration staging-istio-validator-istio-system staging-istiod-default-validator --ignore-not-found
+
+# Delete broken deployments
+kubectl delete deployment staging-cert-manager staging-cert-manager-cainjector staging-cert-manager-webhook -n cert-manager --ignore-not-found
+```
+
+### Istio VirtualService gateway reference
+
+With `namePrefix: staging-`, the staging Istio Gateway is named `staging-istio-ingress-gateway`. VirtualServices must reference it as `istio-system/staging-istio-ingress-gateway`, not `istio-system/istio-ingress-gateway`.
+
+If a VS ends up with the wrong gateway reference after apply, patch it directly:
+```bash
+kubectl patch virtualservice staging-grafana -n monitoring --type=merge \
+  -p '{"spec":{"gateways":["istio-system/staging-istio-ingress-gateway"],"http":[{"route":[{"destination":{"host":"staging-kube-prometheus-stack-grafana.monitoring.svc.cluster.local","port":{"number":80}}}]}]}}'
 ```
 
 ## Apply order

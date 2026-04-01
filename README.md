@@ -10,6 +10,40 @@ Kubernetes infrastructure setup running on DigitalOcean Kubernetes (DOKS).
 | Node size | s-2vcpu-4gb (1 node) |
 | Region | ap-southeast-1 |
 
+## Resource Usage
+
+Node capacity: **2 vCPU / ~3GB allocatable RAM**
+Current allocation: **1302m CPU (68%) / 2971Mi RAM (98%) — nearly maxed out**
+
+> Prometheus pod is not running (operator only), and most infra pods have no resource requests defined — actual usage is likely higher than what the scheduler sees.
+
+### Pods with defined resource requests
+
+| Namespace | Pod | CPU Request | Mem Request | CPU Limit | Mem Limit |
+|---|---|---|---|---|---|
+| istio-system | istiod | 500m | 2048Mi | — | — |
+| kube-system | cilium | 500m | 410Mi | 1000m | 1024Mi |
+| apps | backend (×2) | 250m each | 256Mi each | 500m | 512Mi |
+| kube-system | coredns (×2) | 100m each | 170Mi each | — | 170Mi |
+| apps | frontend (×2) | 100m each | 128Mi each | 200m | 256Mi |
+| istio-system | istio-ingress | 100m | 128Mi | 2000m | 1024Mi |
+| kube-system | do-node-agent | 102m | 80Mi | — | 300Mi |
+| kube-system | cpc-bridge-proxy | 100m | 75Mi | — | — |
+
+### Pods with no resource requests (unconstrained)
+
+- ArgoCD (8 pods), cert-manager (3 pods), argo-rollouts (2 pods)
+- Grafana, kube-state-metrics, prometheus-operator, node-exporter
+- external-secrets (3 pods), external-dns, tailscale operator
+- kube-system DaemonSets (hubble, konnectivity, csi-do-node, etc.)
+
+### Key observations
+
+- **istiod alone requests 2GB RAM** — the single biggest consumer. Replacing it with nginx-ingress would free ~2GB on the Pi.
+- RAM is already at **98% allocated** on the current node and Prometheus isn't running yet.
+- `backend` and `frontend` pods are `Pending` due to no remaining scheduling headroom.
+- The Pi's 8GB gives more room, but Istio staying would still consume 2GB+ for the control plane alone.
+
 ## Components
 
 
@@ -146,6 +180,202 @@ If a VS ends up with the wrong gateway reference after apply, patch it directly:
 kubectl patch virtualservice staging-grafana -n monitoring --type=merge \
   -p '{"spec":{"gateways":["istio-system/staging-istio-ingress-gateway"],"http":[{"route":[{"destination":{"host":"staging-kube-prometheus-stack-grafana.monitoring.svc.cluster.local","port":{"number":80}}}]}]}}'
 ```
+
+## Homelab Migration Plan (Raspberry Pi 5, 8GB RAM, Single Node)
+
+### Overview
+
+Migration from DOKS (DigitalOcean, sgp1) to a self-hosted Raspberry Pi 5. The Pi has comparable RAM but key differences: **ARM64 architecture**, **no cloud LoadBalancer**, **no managed storage**, and **no cloud secrets manager**.
+
+---
+
+### Phase 1: Pre-Migration Assessment
+
+**1.1 ARM64 Image Compatibility Audit**
+
+Every image must support `linux/arm64`. Capture the full image list from the current cluster:
+
+```bash
+kubectl get pods -A -o jsonpath='{..image}' | tr ' ' '\n' | sort -u
+```
+
+| Component | Image | ARM64 |
+|---|---|---|
+| Prometheus | `quay.io/prometheus/prometheus:v3.5.0` | ✅ |
+| Grafana | `docker.io/grafana/grafana:v12.1.0` | ✅ |
+| AlertManager | `quay.io/prometheus/alertmanager:v0.28.1` | ✅ |
+| kube-state-metrics | `v2.16.0` | ✅ |
+| node-exporter | `v1.9.1` | ✅ |
+| Istio | `v1.29.1` | ✅ |
+| cert-manager | `v1.20.1` | ✅ |
+| ArgoCD | v2.10+ | ✅ |
+| External Secrets Operator | — | ✅ |
+| External DNS | — | ✅ |
+| Tailscale operator | — | ✅ |
+
+**1.2 Resource Baseline**
+
+Capture current usage before migrating:
+
+```bash
+kubectl top nodes
+kubectl top pods -A
+kubectl get pvc -A
+```
+
+Pi 5 has 8GB RAM — same as current node. Istio sidecars add ~50–100MB per pod. Running prod + staging with full Istio will be tight (~5–6GB peak). Consider dropping staging or replacing Istio with nginx-ingress (saves ~1GB).
+
+---
+
+### Phase 2: Infrastructure Setup (Pi 5)
+
+**2.1 OS & Kubernetes**
+
+- Install **Ubuntu 24.04 LTS arm64** (better k8s compatibility than Raspberry Pi OS)
+- Install **k3s** (lighter than kubeadm; includes local-path-provisioner):
+
+```bash
+curl -sfL https://get.k3s.io | sh -s - \
+  --disable traefik \
+  --disable servicelb \
+  --write-kubeconfig-mode 644
+```
+
+Disable k3s's built-in Traefik (keeping Istio) and servicelb (using MetalLB).
+
+**2.2 LoadBalancer Replacement**
+
+No cloud LB on homelab — use **MetalLB** in L2 mode:
+
+1. Assign a static IP to the Pi on your home network (e.g. `192.168.1.100`)
+2. Configure MetalLB `IPAddressPool` with that IP
+3. The `istio-ingress` LoadBalancer service will claim this IP
+4. Forward ports `80`/`443` on your router to `192.168.1.100`
+
+Add to `istio/base/ingress.yaml`:
+
+```yaml
+annotations:
+  metallb.universe.tf/loadBalancerIPs: "192.168.1.100"
+```
+
+**2.3 Storage**
+
+k3s ships `local-path-provisioner` as the default StorageClass. Add PVCs to components currently running ephemeral (Prometheus, Grafana, AlertManager):
+
+```yaml
+# In grafana/base/mainfest.yaml — Prometheus spec
+storage:
+  volumeClaimTemplate:
+    spec:
+      storageClassName: local-path
+      resources:
+        requests:
+          storage: 20Gi
+```
+
+> **Important:** Use a USB SSD, not the microSD card. Prometheus TSDB write patterns will destroy an SD card within months.
+
+---
+
+### Phase 3: Replace Cloud Dependencies
+
+**3.1 Secrets Management (AWS SM → SOPS + Age)**
+
+External Secrets Operator currently pulls from AWS Secrets Manager. Replace with **SOPS-encrypted secrets in git** + ArgoCD's SOPS decryption plugin:
+
+1. Generate an Age key pair; store the private key securely on the Pi
+2. Encrypt existing secrets with `sops --age`
+3. Remove `external-secrets/` from the stack
+4. Replace `ExternalSecret` resources with regular SOPS-encrypted `Secret` manifests
+5. Configure ArgoCD with the SOPS helm plugin or `argocd-vault-plugin`
+
+Alternatively: **Bitwarden Secrets Manager** (free tier) keeps the ESO pattern without AWS.
+
+**3.2 External DNS (no changes needed)**
+
+External DNS can manage Route53 from anywhere — AWS API is not region-locked. Keep `external-dns/` as-is; just ensure IAM credentials are available on the new cluster.
+
+**3.3 cert-manager (no changes needed)**
+
+Let's Encrypt DNS-01 via Route53 works from any network. cert-manager reaches out to Let's Encrypt and updates Route53 via the AWS API. No changes required.
+
+**3.4 Terraform**
+
+`terraform/` becomes obsolete — the Pi is provisioned manually or via Ansible. Archive the directory for reference but remove it from active use.
+
+---
+
+### Phase 4: Homelab Kustomize Overlay
+
+Create a new environment overlay:
+
+```
+environments/
+  homelab/
+    kustomization.yaml
+```
+
+Key patches for the homelab overlay:
+
+- Drop staging environment (too much RAM overhead for a single Pi node)
+- Reduce Prometheus retention to 15d (disk constraint)
+- Tune Istio sidecar resources: `requests: {cpu: 10m, memory: 64Mi}`
+- Point domains to the Pi's Tailscale hostname or home IP
+
+**Consider replacing Istio with nginx-ingress** on the homelab — Istio adds ~1GB RAM overhead. For a single-node setup where Tailscale handles secure access, nginx-ingress is sufficient and much lighter.
+
+---
+
+### Phase 5: Networking & Access
+
+**Tailscale (keep as-is):** The operator works on ARM64 with no cloud dependency. The `iqbalhakim-ingress` Tailscale hostname continues to work unchanged.
+
+**Home router:**
+
+- Reserve a static DHCP lease for the Pi (`192.168.1.100`)
+- Forward ports `80`/`443` for public access, OR rely solely on Tailscale (no port forwarding — more secure)
+
+**DNS:** If going Tailscale-only, point `grafana.iqbalhakim.ink` and `argocd.iqbalhakim.ink` at the Pi's Tailscale IP. No public port forwarding needed.
+
+---
+
+### Phase 6: Migration Execution
+
+```
+Day 1  Provision Pi 5, install Ubuntu + k3s, install MetalLB, verify kubectl access
+Day 2  Deploy cert-manager, Tailscale operator, External DNS
+Day 3  Deploy Istio (or nginx-ingress), deploy ArgoCD, connect to this git repo
+Day 4  Migrate secrets (SOPS or Bitwarden), deploy kube-prometheus-stack
+Day 5  Deploy apps (frontend/backend), verify all ArgoCD apps Synced/Healthy
+Day 6  Lower Route53 TTLs, cut DNS over to Pi IP, monitor for 24h
+Day 7  Tear down DOKS cluster after confirming stable
+```
+
+---
+
+### Key Risks
+
+| Risk | Mitigation |
+|---|---|
+| ARM64 image gap | Audit all images in Phase 1 before touching infra |
+| RAM pressure with Istio | Replace Istio with nginx-ingress; saves ~1GB |
+| No persistent storage today | Add PVCs before migrating — don't lose Prometheus history |
+| SD card I/O for Prometheus | Use USB SSD for Pi storage |
+| Single point of failure | No HA; document recovery steps and back up PVCs regularly |
+| Home IP change | Use Tailscale exclusively + DDNS (Route53 dynamic update) |
+
+---
+
+### Recommended Simplifications for Homelab
+
+1. **Drop staging overlay** — single environment on Pi
+2. **Replace Istio with nginx-ingress** — saves ~1GB RAM
+3. **Replace AWS SM with SOPS** — removes cloud dependency
+4. **Use USB SSD** — not microSD
+5. **Keep Tailscale** — best zero-config secure access for homelab
+
+---
 
 ## Apply order
 

@@ -36,7 +36,7 @@ resource "digitalocean_kubernetes_cluster" "prod" {
 
   node_pool {
     name       = "prod-pool"
-    size       = "s-2vcpu-4gb" 
+    size       = "s-2vcpu-8gb" 
     node_count = 1
   }
 }

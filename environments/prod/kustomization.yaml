@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - ../../argocd/prod/
+  - ../../argo-image-updater/
   - ../../argocd/apps/argo-rollouts.yaml
   - ../../argocd/apps/frontend.yaml
   - ../../argocd/apps/backend.yaml

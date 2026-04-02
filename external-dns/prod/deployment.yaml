@@ -16,5 +16,4 @@ spec:
             - --source=ingress
             - --policy=upsert-only
             - --registry=txt
-            - --provider=aws
-            - --zone-id-filter=Z06541262U0JLX5W7P6LN
+            - --provider=cloudflare

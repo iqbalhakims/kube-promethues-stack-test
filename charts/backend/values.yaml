@@ -12,7 +12,7 @@ strategy:
 image:
   repository: registry.digitalocean.com/coffman/backend
   # This sets the pull policy for images.
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"
 

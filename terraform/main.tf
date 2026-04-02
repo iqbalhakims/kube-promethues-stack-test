@@ -22,7 +22,7 @@ terraform {
     organization = "iqbal-hakim"
 
     workspaces {
-      name = "doks-prod"
+      name = "kube-prometheus-stack-test"
     }
   }
 }

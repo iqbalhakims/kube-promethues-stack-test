@@ -16,6 +16,8 @@ spec:
       hosts:
         - grafana.prod.iqbalhakim.ink
         - argo.prod.iqbalhakim.ink
+        - app.iqbalhakim.ink
+        - api.iqbalhakim.ink
       tls:
         httpsRedirect: true
     - port:
@@ -25,9 +27,45 @@ spec:
       hosts:
         - grafana.prod.iqbalhakim.ink
         - argo.prod.iqbalhakim.ink
+        - app.iqbalhakim.ink
+        - api.iqbalhakim.ink
       tls:
         mode: SIMPLE
         credentialName: iqbalhakim-prod-tls
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: frontend
+  namespace: apps
+spec:
+  hosts:
+    - app.iqbalhakim.ink
+  gateways:
+    - istio-system/istio-ingress-gateway
+  http:
+    - route:
+        - destination:
+            host: frontend.apps.svc.cluster.local
+            port:
+              number: 8080
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: backend
+  namespace: apps
+spec:
+  hosts:
+    - api.iqbalhakim.ink
+  gateways:
+    - istio-system/istio-ingress-gateway
+  http:
+    - route:
+        - destination:
+            host: backend.apps.svc.cluster.local
+            port:
+              number: 8080
 ---
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService

@@ -29,6 +29,8 @@ spec:
   dnsNames:
     - argo.prod.iqbalhakim.ink
     - grafana.prod.iqbalhakim.ink
+    - rollouts.prod.iqbalhakim.ink
+    - prometheus.prod.iqbalhakim.ink
     - app.iqbalhakim.ink
     - api.iqbalhakim.ink
     - iqbalhakim.ink

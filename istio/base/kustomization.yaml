@@ -8,3 +8,4 @@ resources:
   - gateway.yaml
   - servicemonitor.yaml
   - podmonitor.yaml
+  - pdb.yaml

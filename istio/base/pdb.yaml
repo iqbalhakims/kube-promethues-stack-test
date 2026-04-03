@@ -1,0 +1,21 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: istiod
+  namespace: istio-system
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: istiod
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: istio-ingress
+  namespace: istio-system
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: istio-ingress

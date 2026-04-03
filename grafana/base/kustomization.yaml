@@ -6,3 +6,4 @@ resources:
   - pvc.yaml
   - mainfest.yaml
   - external-secrets.yaml
+  - pdb.yaml

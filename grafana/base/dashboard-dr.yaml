@@ -214,6 +214,8 @@ data:
           "fieldConfig": {
             "defaults": {
               "unit": "short",
+              "min": 0,
+              "max": 25,
               "custom": { "lineWidth": 2 },
               "thresholds": {
                 "mode": "absolute",

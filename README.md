@@ -2,6 +2,48 @@
 
 Kubernetes infrastructure setup running on DigitalOcean Kubernetes (DOKS).
 
+## Table of Contents
+
+- [Deployment Guide](#deployment-guide)
+  - [1. Terraform — Provision Infrastructure](#1-terraform--provision-infrastructure)
+  - [2. AWS Secrets Manager — Create Secrets](#2-aws-secrets-manager--create-secrets)
+  - [3. Bootstrap the Cluster](#3-bootstrap-the-cluster)
+  - [4. DOCR Pull Secret](#4-docr-pull-secret)
+  - [5. CI/CD — Build & Push Images](#5-cicd--build--push-images)
+  - [6. ArgoCD — Deploy Apps](#6-argocd--deploy-apps)
+  - [7. Live Endpoints](#7-live-endpoints)
+- [Known Fixes Applied](#known-fixes-applied)
+- [Cluster](#cluster)
+- [Resource Usage](#resource-usage)
+- [Components](#components)
+- [Application Helm Charts](#application-helm-charts)
+  - [Chart structure](#chart-structure)
+  - [Customizing per environment](#customizing-per-environment)
+  - [Before deploying](#before-deploying)
+- [Domains](#domains)
+- [Secrets Management](#secrets-management)
+- [Known issues / Gotchas](#known-issues--gotchas)
+- [Homelab Migration Plan](#homelab-migration-plan-raspberry-pi-5-8gb-ram-single-node)
+  - [Phase 1: Pre-Migration Assessment](#phase-1-pre-migration-assessment)
+  - [Phase 2: Infrastructure Setup (Pi 5)](#phase-2-infrastructure-setup-pi-5)
+  - [Phase 3: Replace Cloud Dependencies](#phase-3-replace-cloud-dependencies)
+  - [Phase 4: Homelab Kustomize Overlay](#phase-4-homelab-kustomize-overlay)
+  - [Phase 5: Networking & Access](#phase-5-networking--access)
+  - [Phase 6: Migration Execution](#phase-6-migration-execution)
+  - [Key Risks](#key-risks)
+  - [Recommended Simplifications for Homelab](#recommended-simplifications-for-homelab)
+- [Observability Demo Checklist](#observability-demo-checklist)
+  - [Metrics to Highlight](#metrics-to-highlight)
+  - [Simulate Failure Scenarios](#simulate-failure-scenarios)
+  - [Observe in Grafana](#observe-in-grafana)
+  - [SLO & Error Budget](#slo--error-budget)
+  - [Resource Usage & Right-Sizing](#resource-usage--right-sizing)
+- [How TLS Certificate Issuance Works](#how-tls-certificate-issuance-works)
+- [Apply order](#apply-order)
+- [Verify secrets sync](#verify-secrets-sync)
+
+---
+
 ## Deployment Guide
 
 End-to-end steps to provision and deploy the stack from scratch.

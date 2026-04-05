@@ -126,6 +126,7 @@ Access ArgoCD at `https://argo.prod.iqbalhakim.ink`.
 | app/api not routed through Istio | Added VirtualServices in `istio/prod/virtualservices.yaml` |
 | app/api DNS not created by external-dns | Added hostnames to `external-dns.alpha.kubernetes.io/hostname` annotation in `istio/prod/ingress-service.yaml` |
 | CPU pressure on single node | Scaled `minReplicas` from `2` → `1` in `charts/*/values-prod.yaml` |
+| Grafana loses Prometheus data connection | ArgoCD + ESO sync loop: incomplete ExternalSecret specs in git caused ArgoCD to detect drift, triggering repeated syncs that ran the `admission-create` job and disrupted the Prometheus webhook. Fixed by completing ExternalSecret specs in `grafana/prod/external-secrets.yaml` and adding `ignoreDifferences` for ESO-managed Secret `/data` fields in `argocd/apps/grafana.yaml` |
 
 ---
 

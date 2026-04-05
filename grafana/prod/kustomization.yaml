@@ -9,3 +9,4 @@ patches:
   - path: admission-patch.yaml
   - path: grafana-config-patch.yaml
   - path: replicas-patch.yaml
+  - path: ha-patch.yaml

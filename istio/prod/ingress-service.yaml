@@ -4,5 +4,5 @@ metadata:
   name: istio-ingress
   namespace: istio-system
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: grafana.prod.iqbalhakim.ink,argo.prod.iqbalhakim.ink,app.iqbalhakim.ink,api.iqbalhakim.ink,iqbalhakim.ink
+    external-dns.alpha.kubernetes.io/hostname: grafana.prod.iqbalhakim.ink,argo.prod.iqbalhakim.ink,app.iqbalhakim.ink,api.iqbalhakim.ink,iqbalhakim.ink,litmus.prod.iqbalhakim.ink
     tailscale.com/hostname: "iqbalhakim-ingress"

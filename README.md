@@ -4,7 +4,11 @@ Kubernetes infrastructure setup running on DigitalOcean Kubernetes (DOKS).
 
 ## Demo
 
-[![Watch the demo on YouTube](https://img.shields.io/badge/YouTube-Demo-red?logo=youtube)](https://www.youtube.com/watch?v=1hWl0pyX6l4)
+### Disaster Recovery Testing
+[![Disaster Recovery Testing](https://img.shields.io/badge/YouTube-Disaster%20Recovery%20Testing-red?logo=youtube)](https://www.youtube.com/watch?v=1hWl0pyX6l4)
+
+### Stress-testing with k6 for 3500 vu
+[![Stress-testing with k6 for 3500 vu](https://img.shields.io/badge/YouTube-Stress--testing%20with%20k6%20for%203500%20vu-red?logo=youtube)](https://youtu.be/cIWA7LCfAV8?si=k2c2EDUvNLcFrj7q)
 
 ## Table of Contents
 
